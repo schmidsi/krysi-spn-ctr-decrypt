@@ -1,7 +1,22 @@
-const r = 4;
+const parsePrettyBit = (prettyBit) => parseInt(prettyBit.replace(/\s+/g, ''), 2);
+
+const pad = (string, multiplier = 4, char = '0') => {
+  while (string.length % multiplier !== 0) string = char + string;
+  return string;
+}
+
+const toBitString = (number, multiplier = 4) => pad(number.toString(2), multiplier);
+
+const toPrettyBit = (number, multiplier = 4) =>
+  toBitString(number, multiplier).split('')
+  .reduce((accumulator, currentValue, currentIndex) =>
+    accumulator + (currentIndex % 4 === 3 ? currentValue + ' ' : currentValue)
+  , '');
+
+const rounds = 4; // r
 const n = 4;
 const m = 4;
-const s = 32;
+const s = 32; // 32bit
 
 const sBox = {
     0x0: 0xE,
@@ -23,8 +38,15 @@ const sBox = {
 
 const bitPermutation = [0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15];
 
-const key = parseInt('0011 1010 1001 0100 1101 0110 0011 1111', 2);
+const key = parsePrettyBit('0011 1010 1001 0100 1101 0110 0011 1111');
 
-const cipherText = 0b00000100110100100000101110111000000000101000111110001110011111110110000001010001010000111010000000010011011001110010101110110000;
+const cipherText = "00000100110100100000101110111000000000101000111110001110011111110110000001010001010000111010000000010011011001110010101110110000"
 
-console.log(key, cipherText);
+// aka K(k, i)
+const roundKey = (key, i) => parseInt(toBitString(key, n * m).substr(4 * i, n * m), 2);
+
+console.log('', toPrettyBit(roundKey(key, 0)), '\n', toPrettyBit(roundKey(key, 1)));
+
+const spn = (text, key, rounds = 4, doEncryption = true) => {
+
+}
