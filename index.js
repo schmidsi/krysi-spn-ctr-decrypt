@@ -31,11 +31,17 @@ assert(toPrettyBit(0b10101), '0001 0101')
 const parseBitString = (prettyBit) => parseInt(prettyBit.replace(/\s+/g, ''), 2)
 assert(parseBitString('0001 0101') === 0b10101)
 
-// inverts a object: the keys will be the values and vice versa
+// inverts an object: the keys will be the values and vice versa
 const invert = (obj) => Object.keys(obj).reduce((accumulator, key) => {
   accumulator[ obj[key] ] = key
   return accumulator
 }, {})
+
+const bitLog = (stringOrInt, description = '', blankLines = 0, chunkSize = 16) => {
+  console.log(toPrettyBit(toBitString(stringOrInt, chunkSize)), description)
+
+  for (let i = 0; i < blankLines; i++) console.log()
+}
 
 // Crypto functions
 // ================
@@ -59,13 +65,15 @@ const substitution = (bitString, inverse = false, sBox = {
   0x9: 0xA,
   0xA: 0x6,
   0xB: 0xC,
-  0xC: 0x6,
+  0xC: 0x5,
   0xD: 0x9,
-  0xE: 0xF
+  0xE: 0x0,
+  0xF: 0x7
 }) => splitChunks(bitString).map(chunk =>
   toBitString((inverse ? invert(sBox) : sBox)[parseBitString(chunk)])).join('')
 assert(substitution('00000001') === '11100100')
 assert(substitution('11100100', true) === '00000001')
+assert(substitution('1111') === '0111')
 
 const bitPermutation = (bitString, map = [0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15]) =>
   bitString.split('').reduce((accumulator, current, index) => {
@@ -80,21 +88,41 @@ const n = 4
 const m = 4
 const s = 32 // 32bit
 
-
-
-
 const key = parseBitString('0011 1010 1001 0100 1101 0110 0011 1111')
 
 const cipherText = '00000100110100100000101110111000000000101000111110001110011111110110000001010001010000111010000000010011011001110010101110110000'
 
-const testSlice = '0010101110110000'
+const testSlice = '0000010011010010'
 
-console.log(testSlice, splitChunks(testSlice))
 
-const spn = (text, key, rounds = 4, doEncryption = true) => {
-  let result = text ^ roundKey(key, n * m, 0)
+const substitutionPermutationNetwork = (bitString, key, decrypt = false, rounds = 4) => {
+  bitLog(bitString, 'starting spn')
+
+  bitLog(roundKey(key, 0), '⨁ round key 0')
+  let result = parseBitString(bitString) ^ roundKey(key, 0)
+  bitLog(result, 'result of initial white step', 1)
 
   for (let i = 1; i < rounds; i++) {
     result = substitution(result)
+    bitLog(result, 'substituted')
+    result = bitPermutation(result)
+    bitLog(result, 'bit permutated')
+    bitLog(roundKey(key, i), `⨁ round key ${i}`)
+    result = parseBitString(result) ^ roundKey(key, i)
+    bitLog(result, `result of round ${i}`, 1)
   }
+
+  result = substitution(result)
+  bitLog(result, 'last substitution')
+  bitLog(roundKey(key, rounds), `⨁ round key ${rounds}`)
+  result = toBitString(parseBitString(result) ^ roundKey(key, rounds))
+  console.log('---- ---- ---- ----')
+  bitLog(result, 'result', 2)
+
+  return result
 }
+assert(
+  substitutionPermutationNetwork(
+    substitutionPermutationNetwork(testSlice, key),
+  key, true) === testSlice)
+
