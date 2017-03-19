@@ -45,7 +45,7 @@ const roundKey = (key, i = 0, size = 16) => parseInt(toBitString(key, size).subs
 assert(roundKey(0b00111010100101001101011000111111) === 0b0011101010010100)
 assert(roundKey(0b00111010100101001101011000111111, 1) === 0b1010100101001101)
 
-//
+// word substitution inclusive inverse and predefined sBox
 const substitution = (bitString, inverse = false, sBox = {
   0x0: 0xE,
   0x1: 0x4,
@@ -65,6 +65,15 @@ const substitution = (bitString, inverse = false, sBox = {
 }) => splitChunks(bitString).map(chunk =>
   toBitString((inverse ? invert(sBox) : sBox)[parseBitString(chunk)])).join('')
 assert(substitution('00000001') === '11100100')
+assert(substitution('11100100', true) === '00000001')
+
+const bitPermutation = (bitString, map = [0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15]) =>
+  bitString.split('').reduce((accumulator, current, index) => {
+    accumulator[map[index]] = current
+    return accumulator
+  }, [])
+  .join('')
+assert(bitPermutation('0100000000000000') === '0000100000000000')
 
 const rounds = 4 // r
 const n = 4
@@ -73,7 +82,6 @@ const s = 32 // 32bit
 
 
 
-const bitPermutation = [0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15]
 
 const key = parseBitString('0011 1010 1001 0100 1101 0110 0011 1111')
 
@@ -87,6 +95,6 @@ const spn = (text, key, rounds = 4, doEncryption = true) => {
   let result = text ^ roundKey(key, n * m, 0)
 
   for (let i = 1; i < rounds; i++) {
-
+    result = substitution(result)
   }
 }
