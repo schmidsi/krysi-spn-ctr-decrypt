@@ -31,6 +31,12 @@ assert(toPrettyBit(0b10101), '0001 0101')
 const parseBitString = (prettyBit) => parseInt(prettyBit.replace(/\s+/g, ''), 2)
 assert(parseBitString('0001 0101') === 0b10101)
 
+// inverts a object: the keys will be the values and vice versa
+const invert = (obj) => Object.keys(obj).reduce((accumulator, key) => {
+  accumulator[ obj[key] ] = key
+  return accumulator
+}, {})
+
 // Crypto functions
 // ================
 
@@ -56,7 +62,8 @@ const substitution = (bitString, inverse = false, sBox = {
   0xC: 0x6,
   0xD: 0x9,
   0xE: 0xF
-}) => splitChunks(bitString).map(chunk => toBitString(sBox[parseBitString(chunk)])).join('')
+}) => splitChunks(bitString).map(chunk =>
+  toBitString((inverse ? invert(sBox) : sBox)[parseBitString(chunk)])).join('')
 assert(substitution('00000001') === '11100100')
 
 const rounds = 4 // r
