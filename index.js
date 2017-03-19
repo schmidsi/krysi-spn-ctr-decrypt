@@ -13,13 +13,17 @@ assert(pad('10101') === '00010101')
 
 // creates a bit string with the speicified chunk size
 // a bitstring is a string consisting of the charachters '0' and '1'
-const toBitString = (number, chunkSize = 4) => pad(number.toString(2), chunkSize)
+const toBitString = (number, chunkSize = 4) => {
+  assert('number' === typeof number)
+  return pad(number.toString(2), chunkSize)
+}
 assert(toBitString(0b01) === '0001')
 assert(toBitString(0b10101) === '00010101')
+assert(toBitString(15) === '1111')
 
 // splits a string in an array with chunks of the same size
 // - pads the string if necessary
-const splitChunks = (string, chunkSize = 4) => toBitString(string).match(new RegExp('.{1,' + chunkSize + '}', 'g'))
+const splitChunks = (string, chunkSize = 4) => pad(string).match(new RegExp('.{1,' + chunkSize + '}', 'g'))
 assert.deepEqual(splitChunks('10101'), ['0001', '0101'])
 
 // format a number into readable 4 char chunks
@@ -38,7 +42,10 @@ const invert = (obj) => Object.keys(obj).reduce((accumulator, key) => {
 }, {})
 
 const bitLog = (stringOrInt, description = '', blankLines = 0, chunkSize = 16) => {
-  console.log(toPrettyBit(toBitString(stringOrInt, chunkSize)), description)
+  const string = 'number' === typeof stringOrInt ?
+    toBitString(stringOrInt, chunkSize) : stringOrInt
+
+  console.log(toPrettyBit(string, chunkSize), description)
 
   for (let i = 0; i < blankLines; i++) console.log()
 }
@@ -69,8 +76,11 @@ const substitution = (bitString, inverse = false, sBox = {
   0xD: 0x9,
   0xE: 0x0,
   0xF: 0x7
-}) => splitChunks(bitString).map(chunk =>
-  toBitString((inverse ? invert(sBox) : sBox)[parseBitString(chunk)])).join('')
+}) => splitChunks(bitString).map(chunk => {
+  const substitut = (inverse ? invert(sBox) : sBox)[parseBitString(chunk)]
+  return toBitString(parseInt(substitut, 10))
+}
+).join('')
 assert(substitution('00000001') === '11100100')
 assert(substitution('11100100', true) === '00000001')
 assert(substitution('1111') === '0111')
@@ -96,14 +106,14 @@ const testSlice = '0000010011010010'
 
 
 const substitutionPermutationNetwork = (bitString, key, decrypt = false, rounds = 4) => {
-  bitLog(bitString, 'starting spn')
+  bitLog(bitString, `starting spn with decrypt: ${decrypt} `)
 
   bitLog(roundKey(key, 0), '⨁ round key 0')
   let result = parseBitString(bitString) ^ roundKey(key, 0)
   bitLog(result, 'result of initial white step', 1)
 
   for (let i = 1; i < rounds; i++) {
-    result = substitution(result)
+    result = substitution(result, decrypt)
     bitLog(result, 'substituted')
     result = bitPermutation(result)
     bitLog(result, 'bit permutated')
@@ -112,7 +122,7 @@ const substitutionPermutationNetwork = (bitString, key, decrypt = false, rounds 
     bitLog(result, `result of round ${i}`, 1)
   }
 
-  result = substitution(result)
+  result = substitution(result, decrypt)
   bitLog(result, 'last substitution')
   bitLog(roundKey(key, rounds), `⨁ round key ${rounds}`)
   result = toBitString(parseBitString(result) ^ roundKey(key, rounds))
@@ -125,4 +135,3 @@ assert(
   substitutionPermutationNetwork(
     substitutionPermutationNetwork(testSlice, key),
   key, true) === testSlice)
-
