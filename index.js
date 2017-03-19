@@ -14,7 +14,7 @@ assert(pad('10101') === '00010101')
 // creates a bit string with the speicified chunk size
 // a bitstring is a string consisting of the charachters '0' and '1'
 const toBitString = (number, chunkSize = 4) => {
-  assert('number' === typeof number)
+  assert('number' === typeof number, `called toBitString with a non number argument: ${number}, ${typeof number}`)
   return pad(number.toString(2), chunkSize)
 }
 assert(toBitString(0b01) === '0001')
@@ -42,21 +42,17 @@ const invert = (obj) => Object.keys(obj).reduce((accumulator, key) => {
 }, {})
 
 const bitLog = (stringOrInt, description = '', blankLines = 0, chunkSize = 16) => {
-  const string = 'number' === typeof stringOrInt ?
-    toBitString(stringOrInt, chunkSize) : stringOrInt
+  const string = 'number' === typeof stringOrInt
+    ? toBitString(stringOrInt, chunkSize)
+    : pad(stringOrInt, chunkSize)
 
-  console.log(toPrettyBit(string, chunkSize), description)
+  console.log(toPrettyBit(string, 4), description)
 
   for (let i = 0; i < blankLines; i++) console.log()
 }
 
 // Crypto functions
 // ================
-
-// aka K(k, i)
-const roundKey = (key, i = 0, size = 16) => parseInt(toBitString(key, size).substr(4 * i, size), 2)
-assert(roundKey(0b00111010100101001101011000111111) === 0b0011101010010100)
-assert(roundKey(0b00111010100101001101011000111111, 1) === 0b1010100101001101)
 
 // word substitution inclusive inverse and predefined sBox
 const substitution = (bitString, inverse = false, sBox = {
@@ -93,6 +89,26 @@ const bitPermutation = (bitString, map = [0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14
   .join('')
 assert(bitPermutation('0100000000000000') === '0000100000000000')
 
+// aka K(k, i)
+const roundKey = (key, i = 0, inverse = false, rounds, size = 16) => {
+  const standard = (key, i, size) =>
+    parseInt(toBitString(key, size).substr(4 * i, size), 2)
+
+  if (inverse) {
+    if (rounds === 0 || i === 0) {
+      return standard(key, rounds - i, size)
+    } else {
+      let result = standard(key, rounds - i, size)
+      let permutated = bitPermutation(toBitString(result, 16))
+      return parseBitString(permutated)
+    }
+  } else {
+    return standard(key, i, size)
+  }
+}
+assert(roundKey(0b00111010100101001101011000111111) === 0b0011101010010100)
+assert(roundKey(0b00111010100101001101011000111111, 1) === 0b1010100101001101)
+
 const rounds = 4 // r
 const n = 4
 const m = 4
@@ -108,8 +124,8 @@ const testSlice = '0000010011010010'
 const substitutionPermutationNetwork = (bitString, key, decrypt = false, rounds = 4) => {
   bitLog(bitString, `starting spn with decrypt: ${decrypt} `)
 
-  bitLog(roundKey(key, 0), '⨁ round key 0')
-  let result = parseBitString(bitString) ^ roundKey(key, 0)
+  bitLog(roundKey(key, 0, decrypt, rounds), '⨁ round key 0')
+  let result = toBitString(parseBitString(bitString) ^ roundKey(key, 0, decrypt, rounds))
   bitLog(result, 'result of initial white step', 1)
 
   for (let i = 1; i < rounds; i++) {
@@ -117,15 +133,15 @@ const substitutionPermutationNetwork = (bitString, key, decrypt = false, rounds 
     bitLog(result, 'substituted')
     result = bitPermutation(result)
     bitLog(result, 'bit permutated')
-    bitLog(roundKey(key, i), `⨁ round key ${i}`)
-    result = parseBitString(result) ^ roundKey(key, i)
+    bitLog(roundKey(key, i, decrypt, rounds), `⨁ round key ${i}`)
+    result = toBitString(parseBitString(result) ^ roundKey(key, i, decrypt, rounds))
     bitLog(result, `result of round ${i}`, 1)
   }
 
   result = substitution(result, decrypt)
   bitLog(result, 'last substitution')
-  bitLog(roundKey(key, rounds), `⨁ round key ${rounds}`)
-  result = toBitString(parseBitString(result) ^ roundKey(key, rounds))
+  bitLog(roundKey(key, rounds, decrypt, rounds), `⨁ round key ${rounds}`)
+  result = toBitString(parseBitString(result) ^ roundKey(key, rounds, decrypt, rounds))
   console.log('---- ---- ---- ----')
   bitLog(result, 'result', 2)
 
@@ -133,5 +149,16 @@ const substitutionPermutationNetwork = (bitString, key, decrypt = false, rounds 
 }
 assert(
   substitutionPermutationNetwork(
+    '0001001010001111',
+    0b00010001001010001000110000000000
+  ) === '1010111010110100'
+)
+assert(
+  substitutionPermutationNetwork(testSlice, key) !==
+  substitutionPermutationNetwork(testSlice, key, true)
+)
+assert(
+  substitutionPermutationNetwork(
     substitutionPermutationNetwork(testSlice, key),
-  key, true) === testSlice)
+  key, true) === testSlice
+)
