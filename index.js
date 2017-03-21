@@ -56,22 +56,22 @@ const bitLog = (stringOrInt, description = '', blankLines = 0, chunkSize = 16) =
 
 // word substitution inclusive inverse and predefined sBox
 const substitution = (bitString, inverse = false, sBox = {
-  0x0: 0xE,
-  0x1: 0x4,
-  0x2: 0xD,
-  0x3: 0x1,
-  0x4: 0x2,
-  0x5: 0xF,
-  0x6: 0xB,
-  0x7: 0x8,
-  0x8: 0x3,
-  0x9: 0xA,
-  0xA: 0x6,
-  0xB: 0xC,
-  0xC: 0x5,
-  0xD: 0x9,
-  0xE: 0x0,
-  0xF: 0x7
+  0b0000: 0b1110, // 0x0: 0xE,
+  0b0001: 0b0100, // 0x1: 0x4,
+  0b0010: 0b1101, // 0x2: 0xD,
+  0b0011: 0b0001, // 0x3: 0x1,
+  0b0100: 0b0010, // 0x4: 0x2,
+  0b0101: 0b1111, // 0x5: 0xF,
+  0b0110: 0b1011, // 0x6: 0xB,
+  0b0111: 0b1000, // 0x7: 0x8,
+  0b1000: 0b0011, // 0x8: 0x3,
+  0b1001: 0b1010, // 0x9: 0xA,
+  0b1010: 0b0110, // 0xA: 0x6,
+  0b1011: 0b1100, // 0xB: 0xC,
+  0b1100: 0b0101, // 0xC: 0x5,
+  0b1101: 0b1001, // 0xD: 0x9,
+  0b1110: 0b0000, // 0xE: 0x0,
+  0b1111: 0b0111 // 0xF: 0x7
 }) => splitChunks(bitString).map(chunk => {
   const substitut = (inverse ? invert(sBox) : sBox)[parseBitString(chunk)]
   return toBitString(parseInt(substitut, 10))
@@ -125,7 +125,7 @@ const substitutionPermutationNetwork = (bitString, key, decrypt = false, rounds 
   bitLog(bitString, `starting spn with decrypt: ${decrypt} `)
 
   bitLog(roundKey(key, 0, decrypt, rounds), '⨁ round key 0')
-  let result = toBitString(parseBitString(bitString) ^ roundKey(key, 0, decrypt, rounds))
+  let result = toBitString(parseBitString(bitString) ^ roundKey(key, 0, decrypt, rounds), 16)
   bitLog(result, 'result of initial white step', 1)
 
   for (let i = 1; i < rounds; i++) {
@@ -134,14 +134,14 @@ const substitutionPermutationNetwork = (bitString, key, decrypt = false, rounds 
     result = bitPermutation(result)
     bitLog(result, 'bit permutated')
     bitLog(roundKey(key, i, decrypt, rounds), `⨁ round key ${i}`)
-    result = toBitString(parseBitString(result) ^ roundKey(key, i, decrypt, rounds))
+    result = toBitString(parseBitString(result) ^ roundKey(key, i, decrypt, rounds), 16)
     bitLog(result, `result of round ${i}`, 1)
   }
 
   result = substitution(result, decrypt)
   bitLog(result, 'last substitution')
   bitLog(roundKey(key, rounds, decrypt, rounds), `⨁ round key ${rounds}`)
-  result = toBitString(parseBitString(result) ^ roundKey(key, rounds, decrypt, rounds))
+  result = toBitString(parseBitString(result) ^ roundKey(key, rounds, decrypt, rounds), 16)
   console.log('---- ---- ---- ----')
   bitLog(result, 'result', 2)
 
