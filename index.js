@@ -89,13 +89,13 @@ const bitPermutation = (bitString, map = [0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14
   .join('')
 assert(bitPermutation('0100000000000000') === '0000100000000000')
 
-// aka K(k, i)
+// aka K(k, i) & K'(k, i)
 const roundKey = (key, i = 0, inverse = false, rounds, size = 16) => {
   const standard = (key, i, size) =>
     parseInt(toBitString(key, size).substr(4 * i, size), 2)
 
   if (inverse) {
-    if (rounds === 0 || i === 0) {
+    if (i === rounds || i === 0) {
       return standard(key, rounds - i, size)
     } else {
       let result = standard(key, rounds - i, size)
@@ -108,6 +108,8 @@ const roundKey = (key, i = 0, inverse = false, rounds, size = 16) => {
 }
 assert(roundKey(0b00111010100101001101011000111111) === 0b0011101010010100)
 assert(roundKey(0b00111010100101001101011000111111, 1) === 0b1010100101001101)
+assert(roundKey(0b00010001001010001000110000000000, 0, true, 4) === 0b1000110000000000)
+assert(roundKey(0b00010001001010001000110000000000, 4, true, 4) === 0b0001000100101000)
 
 const rounds = 4 // r
 const n = 4
@@ -147,15 +149,26 @@ const substitutionPermutationNetwork = (bitString, key, decrypt = false, rounds 
 
   return result
 }
+
 assert(
   substitutionPermutationNetwork(
     '0001001010001111',
     0b00010001001010001000110000000000
-  ) === '1010111010110100'
+  ) === '1010111010110100',
+  'SPN encryption with provided test data failed'
 )
 assert(
   substitutionPermutationNetwork(testSlice, key) !==
-  substitutionPermutationNetwork(testSlice, key, true)
+  substitutionPermutationNetwork(testSlice, key, true),
+  'SPN encryption === SPN decryption'
+)
+assert(
+  substitutionPermutationNetwork(
+    '1010111010110100',
+    0b00010001001010001000110000000000,
+    true
+  ) === '0001001010001111',
+  'SPN decryption with provided test data failed'
 )
 assert(
   substitutionPermutationNetwork(
