@@ -124,28 +124,30 @@ const testSlice = '0000010011010010'
 
 
 const substitutionPermutationNetwork = (bitString, key, decrypt = false, rounds = 4) => {
-  bitLog(bitString, `starting spn with decrypt: ${decrypt} `)
+  //console.log(`starting spn with decrypt: ${decrypt}`)
+  //bitLog(key, '<-- key')
+  //bitLog(bitString, `<-- bitString to decrypt/encrypt`, 1)
 
-  bitLog(roundKey(key, 0, decrypt, rounds), '⨁ round key 0')
+  //bitLog(roundKey(key, 0, decrypt, rounds), '⨁ round key 0')
   let result = toBitString(parseBitString(bitString) ^ roundKey(key, 0, decrypt, rounds), 16)
-  bitLog(result, 'result of initial white step', 1)
+  // bitLog(result, 'result of initial white step', 1)
 
   for (let i = 1; i < rounds; i++) {
     result = substitution(result, decrypt)
-    bitLog(result, 'substituted')
+    // bitLog(result, 'substituted')
     result = bitPermutation(result)
-    bitLog(result, 'bit permutated')
-    bitLog(roundKey(key, i, decrypt, rounds), `⨁ round key ${i}`)
+    // bitLog(result, 'bit permutated')
+    // bitLog(roundKey(key, i, decrypt, rounds), `⨁ round key ${i}`)
     result = toBitString(parseBitString(result) ^ roundKey(key, i, decrypt, rounds), 16)
-    bitLog(result, `result of round ${i}`, 1)
+    // bitLog(result, `result of round ${i}`, 1)
   }
 
   result = substitution(result, decrypt)
-  bitLog(result, 'last substitution')
-  bitLog(roundKey(key, rounds, decrypt, rounds), `⨁ round key ${rounds}`)
+  // bitLog(result, 'last substitution')
+  // bitLog(roundKey(key, rounds, decrypt, rounds), `⨁ round key ${rounds}`)
   result = toBitString(parseBitString(result) ^ roundKey(key, rounds, decrypt, rounds), 16)
-  console.log('---- ---- ---- ----')
-  bitLog(result, 'result', 2)
+  // console.log('---- ---- ---- ----')
+  // bitLog(result, 'result', 2)
 
   return result
 }
@@ -175,3 +177,21 @@ assert(
     substitutionPermutationNetwork(testSlice, key),
   key, true) === testSlice
 )
+
+const rCTRd = (encrypted, key) => {
+  const chunks = splitChunks(encrypted, 16)
+  // prevChunk = y[n-1]
+  const prevChunk = chunks.shift()
+  console.log(prevChunk, chunks)
+
+  return chunks.map((current, index) => {
+    const beforeSPN = (parseBitString(prevChunk) + index) % Math.pow(2, 16)
+    const SPNed = substitutionPermutationNetwork(toBitString(beforeSPN), key, true)
+    const decrypted = parseBitString(SPNed) ^ chunks[index]
+    const chars = splitChunks(toBitString(decrypted).slice(-16), 8)
+
+    console.log(chars)
+    return chars.map(char => String.fromCharCode(parseBitString(char)))
+  })
+}
+console.log(rCTRd(cipherText, key))
