@@ -195,3 +195,5 @@ const rCTRd = (encrypted, key) => {
   })
 }
 console.log(rCTRd(cipherText, key))
+
+// PGP sign test
